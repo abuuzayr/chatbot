@@ -1,5 +1,6 @@
 # cert files
 server.*
 
-# tmp folder
+# distribution folders
 tmp
+dist
