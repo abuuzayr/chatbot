@@ -1,0 +1,69 @@
+#confirmation-modal {
+  .modal-flex-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    .modal-dialog {
+      .modal-content {
+        height: 100%;
+        border-top: 5px solid #bf2828;
+        text-align: center;
+        .modal-body {
+          height: 100%;
+          padding: 0;
+          .confirmation-text {
+            margin-bottom: 10px;
+            > div {
+              padding: 15px 15px 10px;
+              line-height: 20px;
+              &.en {
+                font-weight: 500;
+              }
+            }
+          }
+          .icon-sc-error {
+            background-image: url('data:image/svg+xml;charset%3DUS-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2245%22%20height%3D%2245%22%20viewBox%3D%220%200%2045%2045%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%20stroke%3D%22%23D0011B%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20stroke-width%3D%221.5%22%20d%3D%22M22.022%201C10.236%201%201%2010.767%201%2022.553c0%2011.786%209.236%2021.128%2021.022%2021.128a21.277%2021.277%200%200%200%2015.389-6.555c3.686-3.835%206.27-8.833%206.27-14.573C43.681%2010.767%2033.808%201%2022.022%201z%22%2F%3E%3Cpath%20stroke-width%3D%221.2%22%20d%3D%22M8.963%209.865c-3.185%203.377-5.097%207.63-5.097%2012.715%200%205.097%201.912%209.022%205.097%2012.077%22%2F%3E%3Cpath%20stroke-width%3D%221.5%22%20d%3D%22M22%209.501v14.865M22%2030.205v5.309%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E%0A');
+            background-size: 80px 80px;
+            height: 80px;
+            width: 80px;
+            margin: 50px auto 10px;
+            background-repeat: no-repeat;
+            display: inline-block;
+          }
+        }
+        .modal-footer {
+          padding: 0;
+          display: flex;
+          margin: 7.5px;
+          #confirmation-cancel {
+            background: #2b2929;
+            border-top-left-radius: 5px;
+            border-bottom-left-radius: 5px;
+          }
+          #confirmation-agree {
+            background: #01a446;
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;
+          }
+          .btn {
+            flex-basis: 100%;
+            border: 0;
+            border-radius: 0;
+            color: #ffffff;
+            padding: 3px;
+            + .btn {
+              margin: 0;
+            }
+            .zh {
+              font-size: 15px;
+            }
+          }
+        }
+        .zh {
+          font-size: 17px;
+        }
+      }
+    }
+  }
+}

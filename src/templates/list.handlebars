@@ -1,0 +1,29 @@
+{{#with contents}}
+{{[0].payload.buttons.[0].labels}}
+<header style='background: linear-gradient(to right, rgba(0,0,0,0.8) 0%,rgba(0,0,0,0.8) 15%,rgba(0,0,0,0.8) 20%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.77) 80%,rgba(0,0,0,0.8) 81%,rgba(0,0,0,0.8) 85%,rgba(0,0,0,0.8) 100%) no-repeat 0 0, url(images/test/tshirt-bg.png) no-repeat center center;' class="heading" >
+    <h3 class="title">{{[0].payload.title}}</h3>
+    <p class="message">{{[0].payload.subtitle}}</p>
+    {{#with [0].payload.buttons}}
+    <a href="{{[0].payload.buttons}}" class="button list-button">{{[0].label}}</a>
+    {{/with}}
+</header>
+{{/with}}
+{{#each contents}}
+<div class="item">
+    <div class="item-wrapper">
+        <h3 class="title">{{payload.title}}</h3>
+        <p class="message">{{payload.subtitle}}</p>
+        <!-- <p class="message"><a href="#">This is a link of some sort</a></p> -->
+        {{#each payload.buttons}}
+        <div class="list-button" payload="{{payload}}" type="{{type}}">{{label}}</div>
+        {{/each}}
+    </div>
+    <div class="img-wrapper">
+        <img src="images/test/tshirt-black.png" alt="">
+    </div>
+</div>
+{{/each}}
+
+<div class="more">
+    <div>View More</div>
+</div>

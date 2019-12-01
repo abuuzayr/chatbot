@@ -1,0 +1,12 @@
+<div class="kai-card">
+    <div class="kai-image" style="background-image: url('{{medium.medium_url}}');"></div>
+
+    <div class="kai-text">
+        <h3 class="kai-title">{{title}}</h3>
+        <p class="kai-subtitle">{{{breaklines subtitle}}}</p>
+    </div>
+
+    {{#each buttons}}
+    <div class="kai-button" payload="{{payload}}" type="{{type}}">{{label}}</div>
+    {{/each}}
+</div>

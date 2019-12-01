@@ -1,0 +1,58 @@
+.header-on {
+  .maintenance {
+    @extend %header-push-top;
+  }
+}
+
+.maintenance {
+  @extend %chatbot-overlay;
+  img {
+    width: 335px;
+    height: 184px;
+    text-align: center;
+    display: block;
+    margin: 0 auto;
+  }
+  .content-wrapper {
+    display: table;
+    width: 100%;
+    background: #f9f9f9;
+    height: calc(100% - 65px);
+    overflow-x: hidden;
+    .content {
+      display: table-cell;
+      vertical-align: middle;
+      p {
+        text-align: center;
+        max-width: 335px;
+        margin: 10px auto;
+        line-height: 20px;
+        font-size: 13px;
+        color: #757575;
+        &.title {
+          font-size: 15px;
+          color: #000;
+        }
+      }
+    }
+  }
+  .reload {
+    @extend %overlay-cta;
+  }
+}
+
+:lang(zh-HK) {
+  .maintenance {
+    .reload {
+      font-size: 16px;
+    }
+    .content {
+      p {
+        font-size: 14px;
+        &.title {
+          font-size: 16px;
+        }
+      }
+    }
+  }
+}

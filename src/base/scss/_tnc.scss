@@ -1,0 +1,57 @@
+.header-on {
+  .tnc {
+    @extend %header-push-top;
+  }
+}
+
+.tnc {
+  .lang-switch {
+    display: flex;
+    justify-content: flex-end;
+    padding: 20px 20px 0;
+    .lang {
+      color: #757575;
+      text-decoration: none !important;
+      font-size: 13px;
+      &.active {
+        color: #00a546;
+        pointer-events: none;
+        cursor: default;
+      }
+      + .lang {
+        margin-left: 10px;
+        border-left: 1px solid #d4d4d4;
+        padding-left: 10px;
+      }
+    }
+  }
+  @extend %chatbot-overlay;
+  .tnc-title {
+    text-align: center;
+    font-size: 17px;
+    padding: 20px;
+    color: $blue;
+  }
+  .tnc-content {
+    padding: 10px 10px 10px;
+    height: calc(100% - 160px);
+    background-color: #fbfbfb;
+    margin: 0 15px;
+    font-size: 15px;
+    line-height: 22px;
+    user-select: text;
+    color: #000;
+    .os-padding .os-viewport {
+      bottom: 10px !important;
+    }
+  }
+  .tnc-agree {
+    @extend %overlay-cta;
+  }
+}
+
+:lang(zh-HK) {
+  .tnc .tnc-agree {
+    font-size: 16px;
+  }
+}

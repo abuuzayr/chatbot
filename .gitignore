@@ -1,0 +1,5 @@
+# cert files
+server.*
+
+# tmp folder
+tmp

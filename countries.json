@@ -1,0 +1,62 @@
+{
+  "dev": {
+    "hk": {
+      "en": {
+        "lang": "en",
+        "url": "test-www.sc.com/retail/api/v3/en-hk-engine-chatbot-dev-proj"
+      },
+      "zh": {
+        "lang": "zh-HK",
+        "url": "test-www.sc.com/retail/api/v3/zh-hk-engine-chatbot-dev-proj"
+      },
+      "defaults": {
+        "lat": 22.280383,
+        "long": 114.159077
+      }
+    }
+  },
+  "staging": {
+    "hk": {
+      "en": {
+        "lang": "en",
+        "url": {
+          "prod": "test-www.sc.com/retail/api/v3/en-hk-engine-chatbot-sit",
+          "pre-prod": "test-www.sc.com/retail/api/v3/en-hk-engine-chatbot-sit"
+        }
+      },
+      "zh": {
+        "lang": "zh-HK",
+        "url": {
+          "prod": "test-www.sc.com/retail/api/v3/zh-hk-engine-chatbot-sit",
+          "pre-prod": "test-www.sc.com/retail/api/v3/zh-hk-engine-chatbot-sit"
+        }
+      },
+      "defaults": {
+        "lat": 22.280383,
+        "long": 114.159077
+      }
+    }
+  },
+  "prod": {
+    "hk": {
+      "en": {
+        "lang": "en",
+        "url": {
+          "prod": "www.sc.com/retail/api/v3/en-hk-engine-chatbot",
+          "pre-prod": "test-www.sc.com/retail/api/v3/en-hk-engine-chatbot-sit"
+        }
+      },
+      "zh": {
+        "lang": "zh-HK",
+        "url": {
+          "prod": "www.sc.com/retail/api/v3/zh-hk-engine-chatbot",
+          "pre-prod": "test-www.sc.com/retail/api/v3/zh-hk-engine-chatbot-sit"
+        }
+      },
+      "defaults": {
+        "lat": 22.280383,
+        "long": 114.159077
+      }
+    }
+  }
+}

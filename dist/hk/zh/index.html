@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+
+<head>
+    <!-- START: Anti clickjacking measures -->
+    <style id="antiClickjack">
+        body {
+            visibility: hidden !important;
+            position: absolute !important;
+            opacity: 0 !important;
+        }
+    </style>
+    <script type="text/javascript">
+        /**
+         * Block framing of this page if not in domain whitelist.
+         * Whitelist domains are in the allowedDomains array.
+         * This code is at the top so it will be parsed ASAP.
+         * Inspired from https://www.codemagi.com/blog/post/194
+         * 
+         * @todo: Remove mobile handling whem mobile 2.0 is updated.
+         */
+        var allowedDomains = [
+            'preview.standardchartered.com',
+            'www.sc.com',
+            'av.sc.com',
+            'ibank.standardchartered.com.hk',
+            'test-www.sc.com'
+        ];
+        var parentUrl = parent !== window ? document.referrer : null,
+            parentHostname,
+            loadedOnMobile = false;
+        if (parentUrl) {
+            // remove protocol
+            parentHostname = parentUrl.indexOf('://') > -1 ? parentUrl.split('/')[2] : parentUrl.split('/')[0];
+            // find & remove params
+            parentHostname = parentHostname.split('?')[0];
+        }
+        var userAgent = window.navigator.userAgent.toLowerCase(),
+            isSafari = /safari/.test(userAgent),
+            ios = /iphone|ipod|ipad/.test(userAgent),
+            android = /android/.test(userAgent),
+            webview = /wv/.test(userAgent);
+        if (ios && !isSafari || android && webview) {
+            loadedOnMobile = true;
+        }
+        // if parent domain is safe, delete hidden properties applied to body above
+        // else redirect to an blank page
+        if (window._chatbotLoad && loadedOnMobile || allowedDomains.indexOf(parentHostname) > -1) {
+            var antiClickjack = document.getElementById('antiClickjack');
+            antiClickjack.parentNode.removeChild(antiClickjack);
+        } else {
+            window.location = 'about:blank';
+        }
+    </script>
+    <!-- END: Anti clickjacking measures -->
+    <meta charset="utf-8">
+    <title>Standard Chartered Bank ChatBot</title>
+    <meta name="description" content="SCB.ChatBot">
+    <meta name="author" content="Standard Chartered Bank">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <!-- // Check if browser is supported -->
+    <script src="../../scripts/bowser.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        /**
+         * Check User Agent for version and redirect to the country's 
+         * default rowser unsupported page if the browser or its
+         * version is unsupported.
+         * Bowser repo: https://github.com/lancedikson/bowser
+         *
+         * @todo: Get country string from window.location
+         */
+        var browserMinVersions = {
+                firefox: '58',
+                msedge: '15',
+                safari: '11',
+                chrome: '63',
+                msie: '11'
+            },
+            uaString = window.navigator.userAgent,
+            countryStr = 'hk'; // grunt will replace this by the country code
+
+        // Firefox version is different only for iOS and not handled by bowser.
+        if (!('firefox' == bowser.name.toLowerCase() && /fxios/.test(uaString.toLowerCase()))) {
+            if (bowser.isUnsupportedBrowser(browserMinVersions, uaString)) {
+                // Redirect to country's unsupported browser page.
+                window.location.href = 'https://www.sc.com/' + countryStr + '/unsupported-browser/';
+            }
+        }
+    </script>
+    <!-- END: Check if browser is supported -->
+
+    <!-- START: Top level functions to run -->
+    <script>
+        /**
+         * Add postMessage event listener here so that it can be parsed early
+         * Listens to a message from the parent to run some methods.
+         */
+        window.addEventListener("message", receiveMessage, false);
+
+        /**
+         * Event listener for postMessage from parent
+         *
+         * @param {Object} event - The event passed from the parent.
+         */
+        function receiveMessage(event) {
+            // Check first if parent is in domain whitelist
+            var safeOrigin = false;
+            for (var i in allowedDomains) {
+                if (event.origin.indexOf(allowedDomains[i]) > -1) safeOrigin = true;
+            }
+            if (safeOrigin) {
+                // Fix for #2371 - ping function called when still undefined
+                if (event.data === 'openChatbot' && 'undefined' !== typeof ping) {
+                    ping();
+                }
+                // jQuery may not be loaded yet so we just use vanilla JS
+                // Focus on text input if this page is visited on desktop
+                if (!(bowser.mobile || bowser.tablet)) {
+                    if (document.getElementsByClassName('kai-input-prompt').length > 0) {
+                        document.getElementsByClassName('kai-input-prompt')[0].focus();
+                    }
+                }
+                addGoogleAnalytics();
+                // Update the window location if the user switches the language outside of an iframe.
+                if (event.data.hasOwnProperty('switchIframeURL')) {
+                    if (event.data['switchIframeURL']) {
+                        window.location = event.data['switchIframeURL'];
+                    }
+                } else if (event.data.hasOwnProperty('applyLang')) {
+                    // Remove active class from current language.
+                    if (event.data['applyLang']) {
+                        $.each($('.chatbot-header [data-lang="' + event.data['applyLang'] + '"]'), function() {
+                            $(this).removeClass('active');
+                        });
+                        $('.chatbot-header .lang-switch').show();
+                    }
+                } else if (event.data.hasOwnProperty('langClickEvent')) {
+                    // Remove active class from current language.
+                    if (event.data['langClickEvent']) {
+                        if (event.data.hasOwnProperty('showModal') && event.data['showModal']) {
+                            langSwitchConfirmModal(event.data['langClickEvent']);
+                        } else {
+                            langClickEvent(event.data['langClickEvent']);
+                        }
+                    }
+                } else if (event.data.hasOwnProperty('loginSuccess')) {
+                    // Remove active class from current language.
+                    if (event.data['loginSuccess']) {
+                        closeLoginModal(event.data['loginSuccess']);
+                        $('.logout-btn').fadeIn();
+                    }
+                } else if (event.data.hasOwnProperty('logoutSuccess')) {
+                    // Trigger logout button fade.
+                    if (event.data['logoutSuccess']) {
+                        $('.logout-btn').fadeOut();
+                    }
+                } else if (event.data === 'logout') {
+                    // Log user out when clicked from parent header.
+                    logoutUser();
+                }
+            }
+        }
+
+        /**
+         * Add google analytics script to head and body if not added yet
+         */
+        function addGoogleAnalytics() {
+            if (!document.getElementById('gaHeadScript')) {
+                var gaNoScript = document.createElement('noscript'),
+                    gaHeadPreScript = document.createElement('script'),
+                    gaHeadScript = document.createElement('script');
+                gaNoScript.innerHTML =
+                    '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-K8JV8XJ"height="0" width="0" style="display:none;visibility:hidden"></iframe>';
+                gaHeadPreScript.innerHTML =
+                    "window.dataLayer=window.dataLayer||[];dataLayer.push({'event':'vPV_chatbot','vPVbot':'/" +
+                    countryStr +
+                    "/chatbot/'});";
+                gaHeadScript.id = 'gaHeadScript';
+                gaHeadScript.innerHTML =
+                    "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-K8JV8XJ');";
+
+                var headElement = document.getElementsByTagName('head')[0],
+                    bodyElement = document.getElementsByTagName('body')[0];
+                headElement.insertBefore(gaHeadPreScript, headElement.firstChild);
+                headElement.insertBefore(gaHeadScript, gaHeadPreScript.nextSibling);
+                bodyElement.insertBefore(gaNoScript, bodyElement.firstChild);
+            }
+        }
+
+        /**
+         * Language click event
+         */
+        function langClickEvent(lang) {
+            /**
+             * Redirect chatbot to new language URL.
+             * Append existing params to the new URL.
+             * Vanilla JavaScript.
+             */
+            var newLang = lang.split('-')[0];
+            var url = window.location.href.split('/');
+            url[url.indexOf('hk') + 1] = newLang;
+            var newUrl = url.join('/');
+            var params = paramsToObject(newUrl);
+            // replace the subject id and entry type values with respective lang values.
+            var ln = newLang === 'zh' ? '_CN' : '_EN';
+            for (var j in params) {
+                // Remove parameters that have no value or default value
+                if (Object.keys(defaultBotParams).indexOf(j) > -1 || typeof params[j] === 'undefined') {
+                    delete params[j];
+                }
+                if (j == 'subject-id' || j == 'entry-type') {
+                    params[j] = params[j].replace(/_(EN|CN)/, ln);
+                }
+            }
+            newUrl = newUrl.split('?')[0] + '?' + paramsToStr(params);
+            // log out the user
+            logoutUser(true);
+            // this is needed in case the user is not logged in
+            window.top.postMessage({
+                logoutSuccess: true
+            }, '*');
+            // inform parent about the change to update the iframe url
+            window.top.postMessage({
+                switchIframeURL: newUrl
+            }, '*');
+        }
+    </script>
+    <!-- Import concatenated minified css -->
+    <link type="text/css" rel="stylesheet" href="../../styles/main.min.css?v=1.42" media="all">
+    <!-- Load active module css -->
+    <link type="text/css" rel="stylesheet" href="../../styles/modules.min.css?v=1.42" media="all">
+</head>
+
+<body>
+    <div class="preloader" style="visibility: visible; opacity: 1.0;"></div>
+    <div class="maintenance" style="visibility: visible; opacity: 0.0;">
+        <!-- 
+      The text in the divs below are just placeholders.
+      They will be replaced by text from config.json 
+    -->
+        <div class="content-wrapper">
+            <div class="content">
+                <img src="../../images/maintenance.png" alt="maintenance">
+                <p class="title">We can't reach Stacy at this moment.</p>
+                <p class="subtitle">You can try switching to another WiFi network or use a 3G/4G network and try again. If the situation remains, please come back later as the system may be undergoing maintenance.</p>
+                <p class="bottom-subtitle" style="margin-bottom: -5px;">Need immediate help?</p>
+                <p class="livebank-wrapper">You can
+                    <a href="#" class="livebank">
+            Chat with Live Bank
+          </a> now
+                </p>
+            </div>
+        </div>
+        <button class="reload">Contact Stacy Again</button>
+    </div>
+    <div class="tnc" style="visibility: visible; opacity: 0.0;">
+        <!-- 
+      Add new languages for the T & C language switcher here
+      The data-lang attribute should be filled with the ISO language code
+    -->
+        <div class="lang-switch">
+            <a class="lang" href="#" data-lang="en">EN</a>
+            <a class="lang" href="#" data-lang="zh-HK">中文</a>
+        </div>
+        <!-- 
+      The text in the divs below are just placeholders.
+      They will be replaced by text from config.json
+    -->
+        <div class="tnc-title">Terms & Conditions</div>
+        <div class="tnc-content">
+            Welcome to Standard Chartered Bank (Hong Kong) Limited. The conversation may be recorded for training, quality and dispute handling purposes. By continuing to with this conversation, you are deemed to have agreed to Bank’s privacy statement. Please refer
+            to the link for details -
+            <a href='https://www.sc.com/en/privacy-policy/' target='_blank'>https: //www.sc.com/en/privacy-policy/</a>
+        </div>
+        <button class="tnc-agree">Continue</button>
+    </div>
+    <!-- 
+    @todo: remove this header once mobile 2.0 adds its own header
+  -->
+    <div class="chatbot-header">
+        <a class="close-chat" href="/exit">
+      <span class="c-icon icon-sc-close-chatbot"></span>
+    </a>
+        <div class="lang-switch" style="display: none;">
+            <a class="active lang" href="#" data-lang="en">EN</a>
+            <a class="active lang" href="#" data-lang="zh-HK">中文</a>
+        </div>
+        <div class="chat-title">Stacy</div>
+        <div class="logout-btn">Log Out</div>
+    </div>
+    <div class="kai-wrap" style="visibility: visible; opacity: 0.0;">
+        <div class="screen-content"></div>
+    </div>
+
+    <!-- Here is where grunt-html-build compiles and prints the html files from src/modules/active -->
+    <!-- START: Modules HTML section -->
+    <!-- Location picker Modal -->
+    <div id="confirmation-modal" class="modal fade" role="dialog">
+        <div class="modal-flex-wrapper">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div class="icon-sc-error"></div>
+                        <div class="confirmation-text">
+                            <div class="zh">
+                                如果您轉換至其他語言，您當前的對話就會結束。您是否要繼續？
+                            </div>
+                            <div class="en">
+                                If you proceed to change your language option, you will end your current conversation.<br/> Do you want to proceed?
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="confirmation-cancel" type="button" class="btn btn-default" data-dismiss="modal">
+                        <div class="zh">
+                            取消
+                        </div>
+                        <div class="en">
+                            CANCEL
+                        </div>
+                    </button>
+                        <button id="confirmation-agree" type="button" class="btn btn-default" data-dismiss="modal">
+                        <div class="zh">
+                            繼續
+                        </div>
+                        <div class="en">
+                            PROCEED
+                        </div>
+                    </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Location picker Modal -->
+    <div id="myLocationPickerModal" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Pick your Location</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-horizontal" style='width:100%;'>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label" id="location-input">Location:</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="us3-address" />
+                            </div>
+                        </div>
+                        <div id="myLocationPicker" style="width: 100%;height: calc(100vh - 260px);min-height: 200px;"></div>
+                        <input type="text" class="form-control" style="display:none;" id="us3-lat" />
+                        <input type="text" class="form-control" style="display:none;" id="us3-lon" />
+                        <div class="clearfix">&nbsp;</div>
+                        <div class="clearfix"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="validatePosition" type="button" class="btn btn-default" data-dismiss="modal">Select Position</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <iframe id="loginPageFrame" name="loginPageFrame" frameborder="0" height="100%" width="100%"></iframe>
+                    <button type="button" class="close" data-dismiss="modal">
+          <span class="c-icon icon-sc-close-chatbot-x"></span>
+        </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END: Modules HTML section -->
+
+    <!-- START: Script block for global JS functions -->
+    <script type="text/javascript">
+        /**
+         * Gets parameter value from the URL from a supplied parameter key.
+         * This code is from Kasisto, better to leave it.
+         * 
+         * @param {string} parameterName - The parameter to get from the URL
+         * 
+         * @return {string} result - The parameter value
+         */
+        function findGetParameter(parameterName) {
+            var result = null,
+                tmp = [];
+            var items = location.search.substr(1).split("&");
+            for (var index = 0; index < items.length; index++) {
+                tmp = items[index].split("=");
+                if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
+            }
+            return result;
+        }
+
+        /**
+         * Map language strings from config file to their respective elements.
+         * Replaces the text in the targets with the object values.
+         * 
+         * @param {Object} strings - The strings object to parse
+         */
+        function langUtil(strings) {
+            var elements = {
+                "tncTitle": ".tnc-title",
+                "tnc": ".tnc-content",
+                "tncButton": ".tnc-agree",
+                "locationHeader": ".modal-title",
+                "locationInput": "#location-input",
+                "locationButton": "#validatePosition",
+                "maintenanceTitle": ".maintenance .title",
+                "maintenanceSubtitle": ".maintenance .subtitle",
+                "maintenanceBottomSubtitle": ".maintenance .bottom-subtitle",
+                "maintenanceLivebankWrapper": ".maintenance .livebank-wrapper",
+                "maintenanceReload": ".maintenance .reload",
+                "langSwitchTextZH": "#confirmation-modal .confirmation-text .zh",
+                "langSwitchTextEN": "#confirmation-modal .confirmation-text .en",
+                "confirmCancelBtnZH": "#confirmation-cancel .zh",
+                "confirmCancelBtnEN": "#confirmation-cancel .en",
+                "confirmAgreeBtnZH": "#confirmation-agree .zh",
+                "confirmAgreeBtnEN": "#confirmation-agree .en",
+                "logOutBtn": ".chatbot-header .logout-btn"
+            }
+            $.each(elements, function(key, value) {
+                $(value).html(strings[key]);
+            });
+        }
+
+        /**
+         * Takes a URL with GET parameters and returns an object with
+         * key = parameter, value = parameter value
+         * 
+         * @return {Object} The key:value object of parameter values
+         */
+        function paramsToObject(str) {
+            if (str.indexOf('?') > -1) {
+                return str.replace(/.+\?/, '').split("&").map(function(n) {
+                    return n = n.split("="), this[n[0]] = n[1], this
+                }.bind({}))[0];
+            }
+        }
+
+        /**
+         * Takes an object and converts it to a param string
+         *
+         * @param {Object} params - The object to convert.
+         *
+         * @returns {string} str - the url parameter string
+         */
+        function paramsToStr(params) {
+            var str = '';
+            for (var k in params) {
+                str += k + '=' + params[k];
+                if (k !== Object.keys(params)[Object.keys(params).length - 1]) str += '&';
+            }
+            return str;
+        }
+
+        var langSwitchConfirmModal,
+            customButtonActions,
+            openLogin,
+            closeLoginModal;
+
+        /**
+         * Initialise functions that depend on deps.min.js
+         */
+        function initFunctions($jq) {
+            /**
+             * Show lang switch confirmation modal
+             */
+            langSwitchConfirmModal = function(lang) {
+                $jq('#confirmation-modal').modal('show');
+                document.getElementById('confirmation-modal').dataset.lang = lang;
+            }
+
+            /**
+             * Custom actions to override KAI default button actions
+             * 
+             * @param {string} type - The type of button clicked
+             * @param {string} payload - the payload attached to the button
+             * @param {string} message - The button text
+             *
+             * @todo: Remove windowTarget when mobile.html is removed
+             */
+            customButtonActions = function(type, payload, message) {
+                // Handle opening of 'Send Location' button
+                // Display modal for location selection on click
+                type = type.toUpperCase();
+                if (type == "LOCATION") {
+                    if (typeof toGetLocation !== 'undefined' && toGetLocation) {
+                        navigator.geolocation.getCurrentPosition(showPosition);
+
+                        function showPosition(position) {
+                            $('#myLocationPicker').locationpicker({
+                                location: {
+                                    latitude: position.coords.latitude,
+                                    longitude: position.coords.longitude
+                                },
+                            });
+                            getLocation();
+                            toGetLocation = false;
+                        }
+                    }
+                    if (!isMapSet) {
+                        setGMap();
+                    }
+                    $jq('#myLocationPickerModal').modal('show');
+                    return true;
+                }
+
+                // Set window target to _blank for desktop and _system for mobile
+                var windowTarget = '_blank';
+
+                // Handle opening of login button
+                // Calls the openLogin function with the payload
+                if (type == "LOGIN" && !isPilot) {
+                    openLogin(payload);
+                }
+
+                // Handle opening of normal link buttons
+                // Open external link in a new tab
+                if (type == "HYPERLINK" || type == "LOGIN" && isPilot) {
+                    payload = type == "HYPERLINK" ? payload : isPilot;
+                    // Disable open new tab for Chrome on mobile
+                    if (ios && userAgent.includes('chrome') && payload.includes('maps')) {
+                        var windowTarget = '';
+                    }
+                    if (loadedOnMobile && payload.includes('login')) {
+                        document.getElementsByClassName('close-chat')[0].click();
+                        return;
+                    }
+                    window.open(payload, windowTarget);
+                }
+
+                // Handle opening of livebank links
+                // Calls the openLivebank function with the payload
+                if (type == "EXTERNAL_CHAT_HANDOVER") {
+                    openLivebank(payload, windowTarget);
+                }
+            }
+
+            /**
+             * Opens login page with the url from button payload
+             * Related tickets: #2480
+             * 
+             * @param  {string} payload - string with token and other parameters
+             */
+            openLogin = function(payload) {
+                window.frames['loginPageFrame'].location.replace(payload);
+                $jq('#loginModal').modal('show');
+            }
+
+            /**
+             * Close login modal after receiving from post message
+             *
+             * @param  {string} closeDelay - delay to close modal
+             */
+            closeLoginModal = function(closeDelay) {
+                setTimeout(function() {
+                    $jq('#loginModal').modal('hide');
+                }, 'immediate' === closeDelay ? 0 : 1000);
+            }
+        }
+
+        /**
+         * Opens login page with the url from button payload
+         * Related tickets: #2480
+         * 
+         * @param  {string} payload - string with token and other parameters
+         */
+
+        function openLogin(payload) {
+            window.frames['loginPageFrame'].location.replace(payload);
+            $jq3_2_1('#loginModal').modal('show');
+        }
+
+        /**
+         * Opens livebank link and appends data from payload
+         * Related tickets: #2240, #1817, #1968, #2240
+         * 
+         * @param  {string} payload - string with token and other parameters
+         * @param  {string} target - window target to open the link
+         */
+        function openLivebank(payload, target) {
+            if (findGetParameter('ibank') === 'true') {
+                window.parent.postMessage('{"action":"IBankingLive"}', '*');
+            } else {
+                // Parse payload and declare url paths
+                var payload = payload || langConfig.translations.serverErrorButtonUrl || '',
+                    target = '_system' === target ? '_system' : 'lb_window',
+                    arguments = payload.split('?'),
+                    resource = 'livechat.html?',
+                    resourcePath = '/assets/global/chatbot/',
+                    baseUrl = window.location.origin.replace('www.sc.com', 'av.sc.com'),
+                    chatParams = payload.includes('?') ? paramsToObject(payload) : {};
+                chatParams.entryType = findGetParameter('entry-type') || langConfig.livebankProfile || 'HK_UC12_EN';
+                chatParams.subjectId = findGetParameter('subject-id') || 'DEFAULT';
+                chatParams.workGroup = findGetParameter('work-group');
+                // Generate new URL for livebank.html with parameters
+                var chatParamStr = '';
+                for (var k in chatParams) {
+                    chatParamStr += k + '=' + chatParams[k] + '&';
+                }
+                var url = baseUrl + resourcePath + resource + chatParamStr + 'url=' + encodeURIComponent(arguments[0]);
+                // Open new window and trigger POST request on target URL, see livebank.html
+                var left = (screen.width / 2) - (854 / 2);
+                var top = (screen.height / 2) - (480 / 2);
+                var windowoption = "width=854,height=480,left=" + left + ",top=" + top +
+                    ",resizable=yes,scrollbars=yes" + top + ", left=" + left;
+                window.open(url, target, windowoption);
+            }
+        }
+
+        /**
+         * Handles kai response callback
+         *
+         * @param {string} payload
+         */
+        function onResponse(payload) {
+            if (!payload) {
+                return;
+            }
+
+            // If there is an auth marker already, check its validity
+            // If session is valid, extend expiry a further 10 minutes
+            // If session is NOT value, log the user out
+            if (sessionStorage.hasOwnProperty('CUSTOMER_AUTHENTICATED_EXPIRY')) {
+                if (sessionStorage.getItem('CUSTOMER_AUTHENTICATED_EXPIRY') > new Date().getTime()) {
+                    // reset to 10 minutes
+                    sessionStorage.setItem('CUSTOMER_AUTHENTICATED_EXPIRY', new Date().getTime() + 10 * 60 * 1000);
+                } else {
+                    logoutUser();
+                }
+            }
+
+            if (payload.status && "401" === payload.status.code) {
+                if (kai && kai.options && kai.options.state && !kai.options.state.polling) {
+                    console.log("start long poll");
+                    kai.startLongPoll();
+                    kai.options.state.polling = true;
+                    setTimeout(function() {
+                        kai.stopLongPoll();
+                        kai.options.state.polling = false;
+                    }, 600000);
+                    return;
+                }
+            }
+
+            if (!payload.message_contents) {
+                return;
+            }
+
+            var found = payload.message_contents.find(function(x) {
+                return x.payload && "CUSTOMER_AUTHENTICATED" === x.payload.type;
+            })
+
+            if (found) {
+                console.log("customer authenticated detected");
+                sessionStorage.setItem('CUSTOMER_AUTHENTICATED_EXPIRY', new Date().getTime() + 10 * 60 * 1000);
+                // set timeout checking interval every 30 seconds
+                logoutTimeoutInterval = setInterval(function() {
+                    if (sessionStorage.getItem('CUSTOMER_AUTHENTICATED_EXPIRY') < new Date().getTime()) {
+                        clearInterval(logoutTimeoutInterval);
+                        logoutUser();
+                    }
+                    console.log(sessionStorage.getItem('CUSTOMER_AUTHENTICATED_EXPIRY'));
+                }, 30000);
+                setTimeout(function() {
+                    kai.stopLongPoll();
+                }, 60000)
+            }
+        }
+
+        /**
+         * Loading of scripts and in sequence.
+         * Cross browser compatible.
+         *
+         * @param  {string} url - string with token and other parameters
+         * @param  {callback} callback - function to callback once script is loaded
+         */
+        function loadScript(url, callback) {
+            var script = document.createElement("script");
+            script.type = "text/javascript";
+            if (script.readyState) { //IE
+                script.onreadystatechange = function() {
+                    if (script.readyState == "loaded" ||
+                        script.readyState == "complete") {
+                        script.onreadystatechange = null;
+                        if (callback) callback();
+                    }
+                };
+            } else { //Others
+                script.onload = function() {
+                    if (callback) callback();
+                };
+                script.onerror = function() {
+                    console.error('This URL: ' + url + ' is unavailable');
+                    script.parentNode.removeChild(script);
+                };
+            }
+            script.src = url;
+            script.src += '?v=' + '1.42';
+            document.getElementsByTagName("head")[0].appendChild(script);
+        }
+
+        /**
+         * Hide chatbot elements and display maintenance page.
+         * Written in Vanilla JS as jQuery may not yet be available.
+         */
+        function displayMaintenance() {
+            // hide chatbot elements
+            var maintenance = document.getElementsByClassName('maintenance')[0];
+            maintenance.style.cssText = "opacity: 0.0; visibility: visible;";
+            var opacity = 0;
+            var maintenanceOpacity = setInterval(function() {
+                opacity += 0.2;
+                maintenance.style.opacity = opacity;
+                if (opacity >= 1.0) {
+                    clearInterval(maintenanceOpacity);
+                }
+            }, 50);
+            var toHide = ['preloader', 'tnc', 'kai-wrap'];
+            for (each in toHide) {
+                var element = document.getElementsByClassName(toHide[each])[0]
+                if (element) element.style.cssText += 'display:none;';
+            }
+        }
+
+        /**
+         * Logs the user out from an authenticated session
+         */
+        function logoutUser(noRefresh) {
+            kai.sendGenericEvent('LOGOUT', [], function(response) {
+                if (!response) {
+                    return;
+                }
+                if (response.status && response.status.code === "200") {
+                    window.top.postMessage({
+                        logoutSuccess: true
+                    }, '*');
+                    sessionStorage.removeItem('CUSTOMER_AUTHENTICATED_EXPIRY');
+                    clearInterval(logoutTimeoutInterval);
+                    if (!noRefresh) {
+                        window.location.reload();
+                    }
+                }
+            });
+        }
+    </script>
+    <!-- END: Script block for global JS functions -->
+
+    <!-- START: Script block for KAI initialisation -->
+    <script type="text/javascript">
+        // Declare global variables
+        var kai;
+        var responseTimeout = 40;
+        var isMapSet = false;
+        var toGetLocation = false;
+        var isPilot = false;
+        // coordinates below are replaced by grunt with data in countries.json
+        var myDefaultLocation = {
+            coords: {
+                latitude: 22.280383,
+                    longitude: 114.159077
+            }
+        };
+        var inputDefault = findGetParameter('input') || '';
+        var langConfig = {
+            "translations": {}
+        };
+        // Set default bot parameters for inclusion in URL
+        var defaultBotParams = {};
+        // Icon URLs
+        var iconUrls = {
+            greeting: '/assets/global/chatbot/images/animated-avatar.gif',
+            inChatIcon: '/assets/global/chatbot/images/bot-avatar.png'
+        };
+        // Set server domains if multiple
+        // This variable is only populated in production build
+        var serverDomains = {
+                'prod': 'test-www.sc.com/retail/api/v3/zh-hk-engine-chatbot-dev-proj',
+                'pre-prod': 'test-www.sc.com/retail/api/v3/zh-hk-engine-chatbot-sit'
+              };
+        // Set debug constant, should be false in production
+        // Suppress console logging if not in debug mode
+        var DEBUG = false;
+        if (!DEBUG) {
+            if ('undefined' === typeof console) {
+                var console = {};
+            }
+            console.log = function() {};
+        }
+        // declare timeout variable to be used on auth
+        var logoutTimeoutInterval = null;
+        // START: DO NOT COMMIT TO STAGING
+        // Check and set if need to spoof UAT environment
+        var isUat = 'true' === findGetParameter('uat');
+        // END: DO NOT COMMIT TO STAGING
+
+        /**
+         * Display maintenance page if app load takes too long
+         * Resolves issue #2266
+         */
+        setTimeout(function() {
+            if ('undefined' === typeof ping) {
+                displayMaintenance();
+            }
+        }, responseTimeout * 1000);
+        /**
+         * Script loading sequence.
+         * 1. deps.min.js - jQuery, google, Kasisto's webview
+         * 2. env.js - KAI engine environment variables
+         * 3. templates.min.js - handlebar templates as JS
+         * 4. grunticon.loader.js - loading of grunticon
+         * 5. Kai initialisation
+         * 6. base.min.js - base scripts to run after Kai init
+         */
+        loadScript('../../scripts/deps.min.js', function() {
+            $jq = jQuery.noConflict(true);
+            initFunctions($jq);
+            // Grab Environment Properties from env.js
+            loadScript('env.js', function() {
+                var serverConfig = envProperties().serverConfig;
+                if (serverDomains && parentUrl && parentHostname.indexOf('preview.standardchartered.com') > -1) {
+                    if (!parentUrl.match(/(staging|development)/)) {
+                        serverConfig.SERVER_URL = serverConfig.SERVER_URL.replace(serverDomains['prod'], serverDomains['pre-prod']);
+                    }
+                    // START: DO NOT COMMIT TO STAGING
+                    if (isUat) {
+                        serverConfig.SERVER_URL = serverConfig.SERVER_URL.replace(serverDomains['prod'], serverDomains['pre-prod']);
+                    }
+                    // END: DO NOT COMMIT TO STAGING
+
+                }
+                loadScript('../../scripts/templates.min.js');
+
+                $(document).ready(function() {
+                    // delete kai session cookie - no library used here
+                    document.cookie = 'k_session_id' + '=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                    // remove auth marker in session storage if available
+                    sessionStorage.removeItem('CUSTOMER_AUTHENTICATED_EXPIRY');
+                    // get configuration parameters from config file
+                    $.getJSON('/configuration/chatbot/config.json?v=1.42').fail(function(data, textStatus, error) {
+                        console.error('Error loading configuration file: ' + error);
+                    }).always(function(data, textStatus) {
+                        if ('success' === textStatus) {
+                            var lang = document.documentElement.lang;
+                            if (!data.hasOwnProperty(lang)) lang = 'en';
+                            langUtil(data[lang]);
+                            langConfig = data[lang];
+                            // assign language specific options from config file
+                            defaultBotParams['title'] = langConfig.translations.introScreenTitle;
+                            defaultBotParams['subtitle'] = langConfig.translations.introScreenMsg;
+                            // assign non-language specific options from config file
+                            if (langConfig.greetingUrl && '' !== langConfig.greetingUrl) {
+                                iconUrls.greeting = langConfig.greetingUrl;
+                            }
+                            if (langConfig.inChatIconUrl && '' !== langConfig.inChatIconUrl) {
+                                iconUrls.inChatIcon = langConfig.inChatIconUrl;
+                            }
+                            if (langConfig.pilotLoginUrl && '' !== langConfig.pilotLoginUrl) {
+                                isPilot = langConfig.pilotLoginUrl;
+                            }
+                        }
+                        kai = new Kai({
+                            element: $('.screen-content'),
+                            debug: DEBUG,
+                            runTests: false,
+                            state: {
+                                firstUserMessage: true,
+                                lastTimestamp: null,
+                                quickRepliesDisplayed: true,
+                                getToken: false
+                            },
+                            templateConfigs: {
+                                quickReplies: {
+                                    position: 'top'
+                                },
+                                introScreen: true,
+                                carousel: {
+                                    leftOffset: 0,
+                                    heightOffset: -25
+                                }
+                            },
+                            serverConfig: serverConfig,
+                            langConfig: langConfig, // get langConfig from config file or blank
+                            multipartMessageDelay: 2400, // Milliseconds delay for each back to back message response so it doesn't show up all at once
+                            responseTimeout: responseTimeout, // (seconds) duration before the serverError message is shown if there is an error from the server
+                            windowPostMessage: true,
+                            botLogoUrl: iconUrls.inChatIcon,
+                            inputDefault: inputDefault,
+                            callbacks: {
+                                deepLinkClicked: customButtonActions,
+                                response: onResponse
+                            },
+                            ignoredActions: ['hyperlink', 'login'],
+                            convertEmoji: false,
+                            cookieExpirationTimeInSec: 30, //expiration time in seconds.
+                            cookieAutoRefresh: true,
+                        });
+                        kai.init();
+                        // Override DeepLink button default behaviour
+                        kai.runCustomAction = customButtonActions;
+                        $('#validatePosition').on('click', function(e) {
+                            if (selectLocation.coords.latitude)
+                                kai.sendLocation(selectLocation);
+                            else
+                                kai.sendLocation(myDefaultLocation);
+                        });
+                        // load the base script
+                        loadScript('../../scripts/base.min.js', function() {
+                            // START: DO NOT COMMIT TO STAGING
+                            if (isUat) {
+                                // Do some stuff only for UAT env
+                            } else {
+                                document.getElementsByTagName('body')[0].classList.add('chatbot-dev-only');
+                            }
+                            // END: DO NOT COMMIT TO STAGING
+                        });
+                    });
+                });
+            });
+        });
+
+        /**
+         * monkeyfix for getComputedStyle = undefined on Firefox
+         * Resolves issue #1879
+         */
+        if (/firefox/i.test(navigator.userAgent)) {
+            window.oldGetComputedStyle = window.getComputedStyle;
+            window.getComputedStyle = function(element, pseudoElt) {
+                var t = window.oldGetComputedStyle(element, pseudoElt);
+                if (t === null) {
+                    Object.defineProperty(window, 'getComputedStyle', {
+                        value: function value() {
+                            return {
+                                getPropertyValue: function getPropertyValue(prop) {
+                                    return '';
+                                }
+                            };
+                        }
+                    });
+                } else {
+                    return t;
+                }
+            };
+        }
+    </script>
+
+    <!-- END: Script block for app initialisation -->
+
+</body>
+
+</html>

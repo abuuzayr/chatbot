@@ -1,0 +1,36 @@
+<div class='kai-carousel'>
+    {{#if contents.[0].payload.medium.medium_url}}
+    <div class="kai-carousel__img">
+    {{else}}
+    <div class="kai-carousel__card">
+    {{/if}}
+      <div class="kai-carousel-arrows">           
+        <div class="kai-left-arrow-wrap" style="display:none;">
+          <i class="fa fa-angle-left kai-left-arrow" aria-hidden="true"></i>
+        </div>            
+        <div class="kai-right-arrow-wrap">
+          <i class="fa fa-angle-right kai-right-arrow" aria-hidden="true"></i>
+        </div>            
+      </div>
+
+      <div class="kai-carousel-content">
+      {{#each contents}}
+        {{#with payload}}
+            <div class="kai-carousel-item" index="{{@index}}">
+            {{#if medium.medium_url}}
+                <div class="kai-image" style="background-image: url('{{medium.medium_url}}');"></div>
+            {{/if}}
+                <div class="kai-text">
+                    <div class='custom-text-1'>THIS IS CUSTOM</div>
+                    <h3 class="kai-title">{{title}}</h3>
+                    <p class="kai-subtitle">{{{breaklines subtitle}}}</p>
+                </div>
+                {{#each buttons}}
+                <div class="kai-button" payload="{{payload}}" type="{{type}}">{{label}}</div>
+                {{/each}}
+            </div>
+        {{/with}}
+        {{/each}}
+        </div>
+    </div>
+</div>

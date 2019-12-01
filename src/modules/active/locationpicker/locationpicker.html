@@ -1,0 +1,31 @@
+<!-- Location picker Modal -->
+<div id="myLocationPickerModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Pick your Location</h4>
+      </div>
+      <div class="modal-body">
+        <div class="form-horizontal" style='width:100%;'>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" id="location-input">Location:</label>
+
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="us3-address" />
+            </div>
+          </div>
+          <div id="myLocationPicker" style="width: 100%;height: calc(100vh - 260px);min-height: 200px;"></div>
+          <input type="text" class="form-control" style="display:none;" id="us3-lat" />
+          <input type="text" class="form-control" style="display:none;" id="us3-lon" />
+          <div class="clearfix">&nbsp;</div>
+          <div class="clearfix"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="validatePosition" type="button" class="btn btn-default" data-dismiss="modal">Select Position</button>
+      </div>
+    </div>
+
+  </div>
+</div>
